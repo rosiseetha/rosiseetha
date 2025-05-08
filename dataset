@@ -1,0 +1,33 @@
+mport pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+
+# Load the dataset
+data = pd.read_csv("Telco-Customer-Churn.csv")
+
+# Drop non-numeric ID column
+data = data.drop("customerID", axis=1)
+
+# Convert TotalCharges to numbers
+data["TotalCharges"] = pd.to_numeric(data["TotalCharges"], errors='coerce')
+data["TotalCharges"].fillna(data["TotalCharges"].mean(), inplace=True)
+
+# Encode text data
+label = LabelEncoder()
+for column in data.select_dtypes(include="object").columns:
+    data[column] = label.fit_transform(data[column])
+
+# Split data
+X = data.drop("Churn", axis=1)
+y = data["Churn"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+# Train model
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Predict and print accuracy
+y_pred = model.predict(X_test)
+print("Accuracy:", accuracy_score(y_test, y_pred))

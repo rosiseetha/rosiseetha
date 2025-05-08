@@ -1,0 +1,119 @@
+# Step 1: Import required libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
+import warnings
+warnings.filterwarnings("ignore")
+
+# Step 2: Load the dataset
+def load_data(path):
+    df = pd.read_csv(path)
+    return df
+
+# Step 3: Preprocess the data
+def preprocess_data(df):
+    # Drop customerID as it's not useful for prediction
+    df.drop("customerID", axis=1, inplace=True)
+    
+    # Convert TotalCharges to numeric, coerce errors, and fill missing
+    df["TotalCharges"] = pd.to_numeric(df["TotalCharges"], errors='coerce')
+    df["TotalCharges"].fillna(df["TotalCharges"].median(), inplace=True)
+
+    # Encode categorical variables
+    categorical_columns = df.select_dtypes(include=["object"]).columns
+    for col in categorical_columns:
+        if col != "Churn":
+            df[col] = LabelEncoder().fit_transform(df[col])
+    
+    # Encode target
+    df["Churn"] = df["Churn"].map({"Yes": 1, "No": 0})
+    
+    return df
+
+# Step 4: Exploratory Data Analysis (EDA)
+def plot_churn_distribution(df):
+    plt.figure(figsize=(6, 4))
+    sns.countplot(data=df, x="Churn")
+    plt.title("Churn Distribution")
+    plt.show()
+
+def plot_correlation_matrix(df):
+    plt.figure(figsize=(14, 10))
+    corr = df.corr()
+    sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm")
+    plt.title("Feature Correlation Matrix")
+    plt.show()
+
+# Step 5: Feature selection and scaling
+def split_and_scale_data(df):
+    X = df.drop("Churn", axis=1)
+    y = df["Churn"]
+    
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Scale features
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    return X_train_scaled, X_test_scaled, y_train, y_test, X.columns
+
+# Step 6: Model training
+def train_model(X_train, y_train):
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    return model
+
+# Step 7: Model evaluation
+def evaluate_model(model, X_test, y_test):
+    y_pred = model.predict(X_test)
+    print("Confusion Matrix:")
+    print(confusion_matrix(y_test, y_pred))
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred))
+    print(f"Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+
+# Step 8: Feature importance visualization
+def plot_feature_importance(model, feature_names):
+    importances = model.feature_importances_
+    indices = np.argsort(importances)[::-1]
+    
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x=importances[indices], y=np.array(feature_names)[indices])
+    plt.title("Feature Importance - Factors Influencing Churn")
+    plt.tight_layout()
+    plt.show()
+
+# Step 9: Main driver function
+def main():
+    data_path = "Telco-Customer-Churn.csv"  # Ensure this file is in the working directory
+    df = load_data(data_path)
+    
+    print("Data loaded. Beginning preprocessing...")
+    df = preprocess_data(df)
+
+    print("Performing Exploratory Data Analysis...")
+    plot_churn_distribution(df)
+    plot_correlation_matrix(df)
+
+    print("Splitting and scaling data...")
+    X_train, X_test, y_train, y_test, feature_names = split_and_scale_data(df)
+
+    print("Training model...")
+    model = train_model(X_train, y_train)
+
+    print("Evaluating model...")
+    evaluate_model(model, X_test, y_test)
+
+    print("Plotting feature importance...")
+    plot_feature_importance(model, feature_names)
+
+if _name_ == "_main_":
+    main()
+
